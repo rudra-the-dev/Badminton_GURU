@@ -1,0 +1,8 @@
+[project]
+name = "badminton-guru"
+version = "0.1.0"
+description = "A Discord bot for competitive badminton doubles matches"
+authors = [{name = "rudra-the-dev"}]
+
+[tool.uv]
+devDependencies = []

@@ -1,0 +1,16 @@
+run = "python main.py"
+modules = ["python-3.11"]
+
+[nix]
+channel = "stable-23_05"
+
+[env]
+VIRTUAL_ENV = "/home/runner/${REPL_SLUG}/venv"
+PATH = "${VIRTUAL_ENV}/bin:$PATH"
+PYTHONPATH = "${VIRTUAL_ENV}/lib/python3.11/site-packages"
+
+[packager]
+pip.packages = ["discord.py", "motor", "python-dotenv", "flask", "anthropic"]
+
+[debugger]
+support = true
