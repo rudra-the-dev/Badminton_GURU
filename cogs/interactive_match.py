@@ -1,8 +1,122 @@
 import discord
 from discord.ext import commands
 import asyncio
+import random
 from cogs.match import Match, ShotType, Team, Player
 from cogs.players import PlayerStats
+
+class CommentaryGenerator:
+    """Generate realistic badminton match commentary"""
+    
+    @staticmethod
+    def get_shot_commentary(player_name, shot_type, success, rally_winner=None):
+        """Generate commentary for a shot"""
+        commentaries = {
+            ShotType.SMASH: {
+                "success": [
+                    f"💥 {player_name} unleashes a POWERFUL SMASH! The shuttlecock flies like a bullet!",
+                    f"⚡ MASSIVE SMASH from {player_name}! What power!",
+                    f"🔥 {player_name} goes for the kill with a devastating SMASH!",
+                    f"💪 BOOM! {player_name} fires an aggressive SMASH down the line!",
+                ],
+                "fail": [
+                    f"❌ {player_name} attempts a smash but it goes OUT! Too ambitious!",
+                    f"😅 {player_name}'s smash is too powerful - it clears the baseline!",
+                    f"⚠️ {player_name} goes for broke with the smash... but it's wide!",
+                ]
+            },
+            ShotType.DROP: {
+                "success": [
+                    f"🪶 Delicate DROP shot from {player_name}! It barely clears the net!",
+                    f"✨ Beautiful touch! {player_name} plays a precision DROP to the front court!",
+                    f"🎯 {player_name} cuts the pace with a clever DROP shot!",
+                    f"👌 Masterful DROP from {player_name}! The opponents are caught off-guard!",
+                ],
+                "fail": [
+                    f"❌ {player_name}'s drop shot doesn't make it over the net!",
+                    f"😞 The drop falls short - that's in the net!",
+                    f"⚠️ {player_name} attempts a drop but can't control it!",
+                ]
+            },
+            ShotType.CLEAR: {
+                "success": [
+                    f"✨ {player_name} sends a high CLEAR to the back! Good defensive play!",
+                    f"📌 Strong CLEAR from {player_name}! Pushing the opponents deep!",
+                    f"🛡️ {player_name} plays a defensive CLEAR to reset the rally!",
+                    f"💨 Fast-paced CLEAR from {player_name}! The shuttle goes deep!",
+                ],
+                "fail": [
+                    f"❌ {player_name}'s clear goes too far - it's OUT!",
+                    f"⚠️ The clear attempt is too high - the opponents can attack!",
+                ]
+            },
+            ShotType.NET_SHOT: {
+                "success": [
+                    f"🕸️ Exquisite NET SHOT from {player_name}! So much finesse!",
+                    f"💎 {player_name} plays a delicate net shot with perfect placement!",
+                    f"🎪 Incredible precision from {player_name}! That net shot was surgical!",
+                    f"✨ {player_name} places a soft net shot just over the tape!",
+                ],
+                "fail": [
+                    f"❌ {player_name}'s net shot catches the tape and falls back!",
+                    f"😞 Just barely - the net shot is too short!",
+                ]
+            },
+            ShotType.DRIVE: {
+                "success": [
+                    f"⚡ Fast DRIVE from {player_name}! Flat and aggressive!",
+                    f"🏹 {player_name} crushes a quick DRIVE! The pace is unreal!",
+                    f"💨 Rapid-fire DRIVE from {player_name}! No time to react!",
+                    f"⚡ {player_name} goes for pace with a blistering DRIVE!",
+                ],
+                "fail": [
+                    f"❌ {player_name}'s drive goes into the net!",
+                    f"⚠️ The drive is too aggressive - it flies out!",
+                ]
+            }
+        }
+        
+        shot_name = shot_type.name
+        commentary_list = commentaries.get(shot_type, {}).get("success" if success else "fail", [])
+        return random.choice(commentary_list) if commentary_list else f"{shot_name} attempt by {player_name}"
+
+    @staticmethod
+    def get_rally_outcome_commentary(winning_team_name, losing_player_name, point_type):
+        """Generate commentary for rally outcome"""
+        outcomes = [
+            f"🎯 **POINT!** {winning_team_name} takes the rally! The pressure mounts!",
+            f"✅ **SCORE!** Excellent play from {winning_team_name}!",
+            f"🏆 **POINT TO {winning_team_name}!** They extend their lead!",
+            f"💪 **{winning_team_name} SCORES!** Momentum swinging their way!",
+            f"🔥 **POINT!** {winning_team_name} is on fire right now!",
+            f"📈 **SCORE!** {winning_team_name} keeps building pressure!",
+        ]
+        return random.choice(outcomes)
+
+    @staticmethod
+    def get_match_commentary(team1_score, team2_score, max_points):
+        """Generate match situation commentary"""
+        total = team1_score + team2_score
+        
+        if total == 0:
+            return "🏸 Here we go! Both teams ready. This will be INTENSE!"
+        
+        diff = abs(team1_score - team2_score)
+        
+        if team1_score == max_points - 1 or team2_score == max_points - 1:
+            return "🔥 WE'RE ON THE EDGE! One team is ONE POINT away from victory!"
+        
+        if diff >= 5:
+            leader = "Your Team" if team1_score > team2_score else "Opponents"
+            return f"📊 {leader} is DOMINATING! Building a commanding lead!"
+        
+        if diff == 0:
+            return "⚖️ TIED! The momentum could shift at any moment!"
+        
+        if diff == 1:
+            return "🎯 CLOSE MATCH! Every point matters!"
+        
+        return "💨 The pace is intense! Both teams are fighting hard!"
 
 class InteractiveMatchCog(commands.Cog):
     def __init__(self, bot):
@@ -43,7 +157,8 @@ class InteractiveMatchCog(commands.Cog):
         self.match_sessions[ctx.author.id] = {
             "started_at": ctx.message.created_at,
             "max_points": max_points,
-            "channel": ctx.channel.id
+            "channel": ctx.channel.id,
+            "rally_count": 0
         }
 
         # Create start embed
@@ -72,92 +187,18 @@ class InteractiveMatchCog(commands.Cog):
         )
 
         embed.add_field(
-            name="🎮 How to Play",
-            value="Use reactions below to select your shot!\n⚡ = Smash | 🪶 = Drop | ✨ = Clear | 🕸️ = Net | ⚙️ = Drive",
+            name="🎮 Select Your Shot",
+            value="Click a button below to play!\n💥 Smash | 🪶 Drop | ✨ Clear | 🕸️ Net Shot | ⚡ Drive",
             inline=False
         )
 
         msg = await ctx.send(embed=embed)
         
-        # Add reaction buttons
-        reactions = ["💥", "🪶", "✨", "🕸️", "⚡"]
-        for reaction in reactions:
-            await msg.add_reaction(reaction)
-
-        self.match_sessions[ctx.author.id]["match_message"] = msg
-
-    @commands.command(name="shot")
-    async def play_shot_command(self, ctx, shot_name: str = None):
-        """Play a shot during an active match"""
+        # Create buttons using views
+        view = ShotSelectionView(self.bot, ctx.author.id, match, self.active_matches, self.match_sessions)
+        await msg.edit(view=view)
         
-        if ctx.author.id not in self.active_matches:
-            embed = discord.Embed(
-                title="❌ No Active Match",
-                description="Start a match with `bd play [11/21]`",
-                color=discord.Color.red()
-            )
-            await ctx.send(embed=embed)
-            return
-
-        if not shot_name:
-            embed = discord.Embed(
-                title="❌ Invalid Shot",
-                description="Available shots: **smash**, **drop**, **clear**, **net**, **drive**",
-                color=discord.Color.red()
-            )
-            await ctx.send(embed=embed)
-            return
-
-        shot_map = {
-            "smash": ShotType.SMASH,
-            "drop": ShotType.DROP,
-            "clear": ShotType.CLEAR,
-            "net": ShotType.NET_SHOT,
-            "drive": ShotType.DRIVE
-        }
-
-        shot_type = shot_map.get(shot_name.lower())
-        if not shot_type:
-            await ctx.send(f"❌ Unknown shot: `{shot_name}`. Try: smash, drop, clear, net, drive")
-            return
-
-        match = self.active_matches[ctx.author.id]
-        success, winner, details = match.execute_rally(match.team1, shot_type)
-
-        if not success:
-            await ctx.send(details)
-            return
-
-        # Create rally result embed
-        embed = discord.Embed(
-            title="🏸 Rally Result",
-            description=details,
-            color=discord.Color.green() if winner == match.team1 else discord.Color.orange()
-        )
-
-        embed.add_field(
-            name="📊 Score",
-            value=match.get_score_display(),
-            inline=False
-        )
-
-        embed.add_field(
-            name="⚡ Stamina",
-            value=f"You: {match.team1.player1.stamina}% | Partner: {match.team1.player2.stamina}%",
-            inline=True
-        )
-
-        embed.add_field(
-            name="💪 Opponent Stamina",
-            value=f"Opp1: {match.team2.player1.stamina}% | Opp2: {match.team2.player2.stamina}%",
-            inline=True
-        )
-
-        await ctx.send(embed=embed)
-
-        # Check if match is over
-        if match.is_match_over():
-            await self._end_match(ctx, match, winner_team=match.winner)
+        self.match_sessions[ctx.author.id]["match_message"] = msg
 
     @commands.command(name="score")
     async def show_score(self, ctx):
@@ -175,19 +216,19 @@ class InteractiveMatchCog(commands.Cog):
 
         embed.add_field(
             name=f"🎯 {match.team1.name}",
-            value=f"**{match.team1.score}** points\nP1: {match.team1.player1.stamina}%\nP2: {match.team1.player2.stamina}%",
+            value=f"**{match.team1.score}** points\nP1 Stamina: {match.team1.player1.stamina}%\nP2 Stamina: {match.team1.player2.stamina}%",
             inline=True
         )
 
         embed.add_field(
             name=f"💪 {match.team2.name}",
-            value=f"**{match.team2.score}** points\nP1: {match.team2.player1.stamina}%\nP2: {match.team2.player2.stamina}%",
+            value=f"**{match.team2.score}** points\nP1 Stamina: {match.team2.player1.stamina}%\nP2 Stamina: {match.team2.player2.stamina}%",
             inline=True
         )
 
         embed.add_field(
             name="ℹ️ Match Info",
-            value=f"First to: **{match.max_points}** points\nRallies played: **{match.rally_count}**",
+            value=f"First to: **{match.max_points}** points\nRallies played: **{match.rally_count}**\n{CommentaryGenerator.get_match_commentary(match.team1.score, match.team2.score, match.max_points)}",
             inline=False
         )
 
@@ -263,76 +304,115 @@ class InteractiveMatchCog(commands.Cog):
         if ctx.author.id in self.match_sessions:
             del self.match_sessions[ctx.author.id]
 
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-        """Handle reaction-based shot selection"""
-        if user.bot:
+class ShotSelectionView(discord.ui.View):
+    """Interactive buttons for shot selection"""
+    
+    def __init__(self, bot, user_id, match, active_matches, match_sessions):
+        super().__init__(timeout=None)
+        self.bot = bot
+        self.user_id = user_id
+        self.match = match
+        self.active_matches = active_matches
+        self.match_sessions = match_sessions
+
+    @discord.ui.button(label="Smash", emoji="💥", style=discord.ButtonStyle.red)
+    async def smash_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.execute_shot(interaction, ShotType.SMASH)
+
+    @discord.ui.button(label="Drop", emoji="🪶", style=discord.ButtonStyle.blurple)
+    async def drop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.execute_shot(interaction, ShotType.DROP)
+
+    @discord.ui.button(label="Clear", emoji="✨", style=discord.ButtonStyle.green)
+    async def clear_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.execute_shot(interaction, ShotType.CLEAR)
+
+    @discord.ui.button(label="Net Shot", emoji="🕸️", style=discord.ButtonStyle.blurple)
+    async def net_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.execute_shot(interaction, ShotType.NET_SHOT)
+
+    @discord.ui.button(label="Drive", emoji="⚡", style=discord.ButtonStyle.danger)
+    async def drive_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.execute_shot(interaction, ShotType.DRIVE)
+
+    async def execute_shot(self, interaction: discord.Interaction, shot_type: ShotType):
+        """Execute a rally with the selected shot"""
+        await interaction.response.defer()
+
+        if interaction.user.id != self.user_id:
+            await interaction.followup.send("❌ This is not your match!", ephemeral=True)
             return
 
-        if user.id not in self.active_matches:
+        if self.user_id not in self.active_matches:
+            await interaction.followup.send("❌ Match not found!", ephemeral=True)
             return
 
-        reaction_map = {
-            "💥": "smash",
-            "🪶": "drop",
-            "✨": "clear",
-            "🕸️": "net",
-            "⚡": "drive"
-        }
-
-        if str(reaction.emoji) not in reaction_map:
-            return
-
-        # Remove the reaction
-        try:
-            await reaction.remove(user)
-        except:
-            pass
-
-        shot_type = reaction_map[str(reaction.emoji)]
-        match = self.active_matches[user.id]
-
-        shot_map = {
-            "smash": ShotType.SMASH,
-            "drop": ShotType.DROP,
-            "clear": ShotType.CLEAR,
-            "net": ShotType.NET_SHOT,
-            "drive": ShotType.DRIVE
-        }
-
-        shot_obj = shot_map[shot_type]
-        success, winner, details = match.execute_rally(match.team1, shot_obj)
+        match = self.active_matches[self.user_id]
+        
+        # Execute rally
+        success, winner, rally_details = match.execute_rally(match.team1, shot_type)
 
         if not success:
-            embed = discord.Embed(description=details, color=discord.Color.red())
-            await reaction.message.reply(embed=embed)
+            embed = discord.Embed(
+                description=rally_details,
+                color=discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed)
             return
 
-        # Create rally result
+        # Create detailed commentary embed
         embed = discord.Embed(
-            title="🏸 Rally Result",
-            description=details,
-            color=discord.Color.green() if winner == match.team1 else discord.Color.orange()
+            title="🏸 Rally in Progress...",
+            color=discord.Color.fuchsia()
         )
 
+        # Shot commentary
+        shot_commentary = CommentaryGenerator.get_shot_commentary(
+            match.team1.player1.name,
+            shot_type,
+            True,
+            winner
+        )
+        embed.add_field(name="🎙️ Shot Played", value=shot_commentary, inline=False)
+
+        # Rally outcome
+        rally_outcome = CommentaryGenerator.get_rally_outcome_commentary(
+            winner.name,
+            match.team2.player1.name if winner == match.team1 else match.team1.player1.name,
+            "rally"
+        )
+        embed.add_field(name="📊 Rally Outcome", value=rally_outcome, inline=False)
+
+        # Current score
         embed.add_field(
-            name="📊 Score",
+            name="📈 Score Update",
             value=match.get_score_display(),
             inline=False
         )
 
+        # Stamina status
         embed.add_field(
-            name="��� Stamina",
-            value=f"You: {match.team1.player1.stamina}% | Partner: {match.team1.player2.stamina}%",
-            inline=True
+            name="⚡ Team Stamina",
+            value=f"**Your Team**: {match.team1.player1.name} {match.team1.player1.stamina}% | {match.team1.player2.name} {match.team1.player2.stamina}%\n**Opponents**: {match.team2.player1.name} {match.team2.player1.stamina}% | {match.team2.player2.name} {match.team2.player2.stamina}%",
+            inline=False
         )
 
-        await reaction.message.reply(embed=embed)
+        # Match situation
+        situation = CommentaryGenerator.get_match_commentary(
+            match.team1.score,
+            match.team2.score,
+            match.max_points
+        )
+        embed.add_field(name="🎤 Commentary", value=situation, inline=False)
 
-        # Check match end
+        embed.set_footer(text="Select your next shot!")
+
+        await interaction.followup.send(embed=embed)
+
+        # Check if match is over
         if match.is_match_over():
             players_cog = self.bot.get_cog("PlayersCog")
-            stats = await players_cog.get_player_stats(user.id, user.name)
+            stats = await players_cog.get_player_stats(interaction.user.id, interaction.user.name)
 
             stats.total_points_scored += match.team1.score
             stats.total_points_conceded += match.team2.score
@@ -345,19 +425,27 @@ class InteractiveMatchCog(commands.Cog):
             await players_cog.save_player_stats(stats)
 
             end_embed = discord.Embed(
-                title="🏁 Match Ended!",
-                description=f"**{match.winner.name}** wins {match.winner.score}-{match.team1.score if match.winner == match.team2 else match.team2.score}!",
+                title="🏁 MATCH OVER!",
+                description=f"🏆 **{match.winner.name.upper()}** WINS!",
                 color=discord.Color.gold()
             )
 
             end_embed.add_field(
-                name="📈 Updated Stats",
-                value=f"**Record**: {stats.wins}W - {stats.losses}L ({stats.get_win_rate()}%)\n**Rank**: {stats.ranking} ({stats.rank_points} RP)",
+                name="📊 Final Score",
+                value=match.get_score_display(),
                 inline=False
             )
 
-            await reaction.message.reply(embed=end_embed)
-            del self.active_matches[user.id]
+            end_embed.add_field(
+                name="📈 Your Updated Stats",
+                value=f"**Record**: {stats.wins}W - {stats.losses}L ({stats.get_win_rate()}%)\n**Ranking**: {stats.ranking} ({stats.rank_points} RP)\n**Streak**: {stats.current_streak}🔥 (Best: {stats.best_streak})",
+                inline=False
+            )
+
+            end_embed.set_footer(text="Type bd play to start another match!")
+
+            await interaction.followup.send(embed=end_embed)
+            del self.active_matches[interaction.user.id]
 
 async def setup(bot):
     await bot.add_cog(InteractiveMatchCog(bot))
