@@ -1,146 +1,171 @@
 import discord
 from discord.ext import commands
+import random
+from datetime import datetime
 
-class HelpCog(commands.Cog):
+# Pool of names to generate unique starter players
+STARTER_NAMES = [
+    "Lin Dan", "Lee Chong Wei", "Viktor Axelsen", "Tai Tzu-ying", 
+    "An Se-young", "Carolina Marin", "PV Sindhu", "Kento Momota",
+    "Lachsen", "Taufik Hidayat", "Peter Gade", "Lee Zii Jia"
+]
+
+class PlayersCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.player_cache = {}
 
-    @commands.command(name="help")  
-    async def show_help(self, ctx):  
-        """Display all available commands"""  
-        embed = discord.Embed(  
-            title="🏸 Badminton GURU - Command Guide",  
-            description="Complete list of commands and how to use them",  
-            color=discord.Color.cyan()  
-        )  
+    def generate_random_player(self):
+        """Generates a player card dict with balanced stats and calculated OVR"""
+        speed = random.randint(65, 85)
+        smash_power = random.randint(65, 85)
+        defense = random.randint(65, 85)
+        agility = random.randint(65, 85)
+        ovr = round((speed + smash_power + defense + agility) / 4)
+        
+        return {
+            "name": f"{random.choice(STARTER_NAMES)} #{random.randint(100, 999)}",
+            "speed": speed,
+            "smash_power": smash_power,
+            "defense": defense,
+            "agility": agility,
+            "ovr": ovr,
+            "skill_points": 0
+        }
 
-        # Account / Profile Commands
-        embed.add_field(  
-            name="👤 Profile & Economy",  
-            value=(  
-                "`bdg start` - Register your profile and claim 1,000 free starting coins\n"  
-                "`bdg claim` - Claim your first free starter pack containing 5 players\n"  
-                "`bdg stats` - View your personal statistics\n"  
-                "`bdg profile [@user]` - View detailed club manager profile\n"  
-                "`bdg leaderboard` - See top 10 players globally\n"  
-            ),  
-            inline=False  
-        )  
+    async def get_player_profile(self, user_id):
+        """Fetch a profile document directly from MongoDB"""
+        return await self.bot.db.players.find_one({"user_id": user_id})
 
-        # Match Commands  
-        embed.add_field(  
-            name="🎮 Match Commands",  
-            value=(  
-                "`bdg match` - Post a matchmaking challenge for a doubles match\n"  
-            ),  
-            inline=False  
-        )  
+    @commands.command(name="start")
+    async def register_profile(self, ctx):
+        """Initialize your Badminton GURU profile and get 1,000 starter coins!"""
+        profile = await self.get_player_profile(ctx.author.id)
 
-        # Game Info  
-        embed.add_field(  
-            name="ℹ️ Game Information",  
-            value=(  
-                "`bdg info` - Learn about game mechanics\n"  
-                "`bdg shots` - Detailed shot descriptions\n"  
-                "`bdg rules` - Badminton GURU rules\n"  
-            ),  
-            inline=False  
-        )  
+        if profile:
+            await ctx.send("❌ You already have an account! Use `bdg profile` or `bdg stats` to view it.")
+            return
 
-        embed.set_footer(text="Prefix: bdg | Example: bdg match")  
-        await ctx.send(embed=embed)  
+        initial_profile = {
+            "user_id": ctx.author.id,
+            "username": ctx.author.name,
+            "coins": 1000,
+            "has_claimed_starter": False,
+            "inventory": [],
+            "matches_played": 0,
+            "wins": 0,
+            "losses": 0,
+            "rank_points": 0,
+            "ranking": "Beginner 🌱",
+            "created_at": datetime.utcnow()
+        }
 
-    @commands.command(name="info")  
-    async def game_info(self, ctx):  
-        """Show game information and mechanics"""  
-        embed = discord.Embed(  
-            title="🏸 About Badminton GURU",  
-            description="A competitive, turn-based PvP Discord bot for virtual badminton doubles matches",  
-            color=discord.Color.cyan()  
-        )  
+        await self.bot.db.players.insert_one(initial_profile)
 
-        embed.add_field(  
-            name="📋 Game Format",  
-            value=(  
-                "**Doubles Match PvP**: 2v2 tactical rallies where you control your card roster lineup.\n"  
-                "**Point System**: Played up to 15 points. If a team achieves a 7-0 shutout, they win instantly!\n"  
-                "**Rally-Based**: Rallies continue dynamically until someone fails a shot or picks the wrong counter.\n"  
-                "**Rewards**: Winning matches rewards you with coins and skill points to upgrade your athletes."  
-            ),  
-            inline=False  
-        )  
+        embed = discord.Embed(
+            title="🏸 Account Created!",
+            description=f"Welcome to the club manager circuit, **{ctx.author.name}**!",
+            color=0x00ACC1
+        )
+        embed.add_field(name="💰 Starter Bonus", value="**1,000 Coins** has been credited to your account balance.")
+        embed.add_field(name="🎁 Next Step", value="Type `bdg claim` to unbox your free Starter Pack containing your first 5 players!", inline=False)
+        await ctx.send(embed=embed)
 
-        embed.add_field(  
-            name="🎯 How to Play",  
-            value=(  
-                "1. Register: `bdg start` to set up your profile and get 1,000 coins.\n"  
-                "2. Recruit: `bdg claim` to open your free pack and obtain your first 5 players.\n"  
-                "3. Challenge: Type `bdg match` and wait for another player to accept via the button.\n"  
-                "4. Match Flow: Select your 2 players using the drop-downs, service choices, and counter shots!"  
-            ),  
-            inline=False  
-        )  
+    @commands.command(name="claim")
+    async def claim_starter_pack(self, ctx):
+        """Claim your free starter pack of 5 random players!"""
+        profile = await self.get_player_profile(ctx.author.id)
 
-        await ctx.send(embed=embed)  
+        if not profile:
+            await ctx.send("❌ Setup your profile first! Use `bdg start` to register.")
+            return
 
-    @commands.command(name="shots")  
-    async def show_shots(self, ctx):  
-        """Detailed explanation of each shot type"""  
-        embed = discord.Embed(  
-            title="🎯 Action Types & Shots",  
-            description="Learn about the primary types of shots you can deploy during live match rallies",  
-            color=discord.Color.cyan()  
-        )  
+        if profile.get("has_claimed_starter", False):
+            await ctx.send("❌ You have already claimed your starter pack cards!")
+            return
 
-        embed.add_field(  
-            name="🏸 Services (Server Choice)",  
-            value="• **High Service**\n• **Low Service**",  
-            inline=False  
-        )  
+        # Generate 5 random player cards
+        new_cards = [self.generate_random_player() for _ in range(5)]
 
-        embed.add_field(  
-            name="💥 Counter Shots (Receiver Choice)",  
-            value=(  
-                "• **Smash It** - Highly aggressive; high risk but high point conversion.\n"  
-                "• **Raise / Lift It** - Defensive clearance to push opponents back, but lifting a high service drops your accuracy entirely!\n"  
-                "• **Drop / Cut It** - Precision tactical soft touch landing close to the front net."  
-            ),  
-            inline=False  
-        )  
+        await self.bot.db.players.update_one(
+            {"user_id": ctx.author.id},
+            {
+                "$set": {"has_claimed_starter": True},
+                "$push": {"inventory": {"$each": new_cards}}
+            }
+        )
 
-        embed.set_footer(text="Choose counters strategically based on your opponent's incoming shot type!")  
-        await ctx.send(embed=embed)  
+        embed = discord.Embed(
+            title="🎁 Pack Opened successfully!",
+            description="You have signed 5 new players to your club roster:",
+            color=0x00FF00
+        )
 
-    @commands.command(name="rules")  
-    async def show_rules(self, ctx):  
-        """Display game rules"""  
-        embed = discord.Embed(  
-            title="⚖️ Badminton GURU Rules",  
-            color=discord.Color.gold()  
-        )  
+        for idx, card in enumerate(new_cards, 1):
+            embed.add_field(
+                name=f"{idx}. {card['name']} (OVR: {card['ovr']})",
+                value=f"⚡ SPD: {card['speed']} | 💥 PWR: {card['smash_power']} | 🛡️ DEF: {card['defense']} | 🏃 AGI: {card['agility']}",
+                inline=False
+            )
 
-        embed.add_field(  
-            name="🏸 Scoring Conditions",  
-            value=(  
-                "• Rally-based format: The side that wins the play sequence earns 1 point.\n"  
-                "• Matches are played to a standard targeted limit of 15 points.\n"  
-                "• **Shutout Rule**: If a match reaches a score of 7-0, the leading team wins immediately.\n"  
-                "• Rewards are distributed to both sides at the end, though winners receive higher stakes."  
-            ),  
-            inline=False  
-        )  
+        embed.set_footer(text="Your team is ready! Type bdg match to find an opponent.")
+        await ctx.send(embed=embed)
 
-        embed.add_field(  
-            name="🧠 Match Calculation Engine",  
-            value=(  
-                "• Shot outcomes are decided by a combination of choice countering matrix logic, "  
-                "the Overall Ratings (OVR) of the active players on court, and an engineered factor of randomness."  
-            ),  
-            inline=False  
-        )  
+    @commands.command(name="stats")
+    async def show_stats(self, ctx):
+        """Display your current career stats"""
+        profile = await self.get_player_profile(ctx.author.id)
 
-        await ctx.send(embed=embed)  
+        if not profile:
+            await ctx.send("❌ Profile not found! Type `bdg start` to create one.")
+            return
+
+        embed = discord.Embed(
+            title=f"🏸 {ctx.author.name}'s Badminton Stats",
+            color=0x00ACC1
+        )
+
+        embed.add_field(name="Ranking", value=f"{profile.get('ranking', 'Beginner 🌱')} ({profile.get('rank_points', 0)} RP)", inline=True)
+        
+        wins = profile.get('wins', 0)
+        losses = profile.get('losses', 0)
+        played = profile.get('matches_played', 0)
+        win_rate = round((wins / max(played, 1)) * 100, 1)
+        
+        embed.add_field(name="Record", value=f"**{wins}W** - **{losses}L**\n{win_rate}% WR", inline=True)
+        embed.add_field(name="Economy", value=f"💰 {profile.get('coins', 0)} Coins", inline=True)
+        embed.add_field(name="Inventory Assets", value=f"🎴 {len(profile.get('inventory', []))} Total Players", inline=True)
+        embed.add_field(name="Total Matches", value=f"🎮 {played} Played", inline=True)
+
+        await ctx.send(embed=embed)
+
+    @commands.command(name="profile")
+    async def show_profile(self, ctx, user: discord.User = None):
+        """Show full manager club profile information"""
+        target = user or ctx.author
+        profile = await self.get_player_profile(target.id)
+
+        if not profile:
+            await ctx.send(f"❌ {'You do' if target == ctx.author else f'{target.name} does'} not have an initialized profile setup yet.")
+            return
+
+        embed = discord.Embed(title=f"👤 {target.name}'s Manager Hub", color=0x00ACC1)
+        embed.add_field(name="🎖️ Ranking Classification", value=f"{profile.get('ranking', 'Beginner 🌱')} ({profile.get('rank_points', 0)} RP)")
+        embed.add_field(name="💰 Wallet Balance", value=f"{profile.get('coins', 0)} Coins")
+        embed.add_field(name="🏸 Recruited Roster Size", value=f"{len(profile.get('inventory', []))} Player Cards")
+        
+        wins = profile.get('wins', 0)
+        losses = profile.get('losses', 0)
+        played = profile.get('matches_played', 0)
+        win_rate = round((wins / max(played, 1)) * 100, 1)
+
+        embed.add_field(name="📊 Career Records", value=f"{wins} Wins / {losses} Losses ({win_rate}% Win Rate)", inline=False)
+        
+        if target.avatar:
+            embed.set_thumbnail(url=target.avatar.url)
+            
+        await ctx.send(embed=embed)
 
 async def setup(bot):
-    await bot.add_cog(HelpCog(bot))
-        
+    await bot.add_cog(PlayersCog(bot))
+    
