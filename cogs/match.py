@@ -9,6 +9,7 @@ class ShotType(Enum):
     CLEAR = {"power": 70, "stamina": 50, "accuracy": 70, "risk": 4}
     NET_SHOT = {"power": 20, "stamina": 40, "accuracy": 85, "risk": 5}
     DRIVE = {"power": 75, "stamina": 60, "accuracy": 65, "risk": 6}
+    LIFT = {"power": 40, "stamina": 35, "accuracy": 80, "risk": 3}
 
 class Court:
     """Represents badminton court positioning"""
