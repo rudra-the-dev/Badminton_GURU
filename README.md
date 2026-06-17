@@ -1,45 +1,31 @@
 # Badminton GURU 🏸🎯
-
-A Discord bot for competitive badminton doubles matches with AI-powered gameplay.
-
+A competitive, turn-based PvP Discord bot for virtual badminton doubles matches with full economy profile integration.
 ## Features
-
-- **Doubles Match System**: Control your side of the court in 2v2 badminton matches
-- **Flexible Point System**: Play to 11 or 21 points (adjustable per match)
-- **Rally-Based Gameplay**: Shot selection system (smash, drop, clear, net shot, drive)
-- **Player Stats**: Speed, smash power, defense, agility
-- **Stamina Mechanics**: Energy depletion based on shot intensity
-- **AI Opponents**: Intelligent opponent behavior
-- **MongoDB Integration**: Persistent player data and match history
-
+ * **True PvP Doubles Matchmaking**: Challenge real players in your server to an interactive 2v2 doubles format.
+ * **Roster Selection Drop-downs**: Hand-pick your player lineup sequentially using interactive Discord dropdown selection lists.
+ * **Dynamic Turn-Based Service & Rally Loops**: Active back-and-forth shot calculations (High/Low Services countered by Smashes, Drops, or Lifts).
+ * **Tactical Counters**: Integrated mechanics where choosing a bad counter (like lifting a High Service) results in an immediate point loss.
+ * **Club Economy Engine**: Register accounts, unbox a free Starter Pack containing 5 unique player assets with randomized OVR stats, and earn coins/skill points.
+ * **Balanced Stamina System**: Energy depletes smoothly per rally to impact shot execution variables without causing arbitrary instant failures.
+ * **Persistent Data Storage**: Full MongoDB Atlas cloud integration to track your career wins, losses, balances, and global leaderboard status.
 ## Commands
-
-- `bd help` - Show all available commands
-- `bd match [points]` - Start a doubles match (11 or 21 points)
-- `bd stats` - View your player statistics
-- `bd leaderboard` - See top players
-
+All commands utilize the unified global prefix: bdg
+ * bdg help - View the operational menu and command handbook.
+ * bdg start - Initialize your club manager account and claim 1,000 starting coins.
+ * bdg claim - Open your free starter pack to sign your first 5 random player cards.
+ * bdg match - Post an open matchmaking lobby invite in a channel for an opponent to accept.
+ * bdg stats - Review your personal career profile record, win rates, and ranking tier.
+ * bdg profile [@user] - Inspect your own or a targeted member's club roster overview.
+ * bdg leaderboard - View the top 10 ranked players across the network database.
 ## Setup
-
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Create a `.env` file with:
-   - `DISCORD_BOT_TOKEN`
-   - `MONGO_URI`
-   - `ANTHROPIC_API_KEY`
-4. Run: `python main.py`
-
+ 1. Clone the repository into your local machine environment.
+ 2. Install the system pack modules via pip.
+ 3. Establish a localized .env configuration file inside the root directory containing your DISCORD_BOT_TOKEN and MONGO_URI.
+ 4. Boot up the core system runtime engine by running main.py.
 ## Game Mechanics
-
-### Match Flow
-- Player controls one side of doubles court (2v2)
-- Each rally: select your shot type
-- Points awarded based on rally outcome
-- First to 11 or 21 points (win by 2 if tied at 19/20 or 10/9) wins
-
-### Shot Types
-- **Smash**: High power, high stamina cost, high risk/reward
-- **Drop**: Low power, low stamina, good for net positioning
-- **Clear**: Medium power, good for defense
-- **Net Shot**: Precise, low stamina, placement-based
-- **Drive**: Fast, medium stamina, good pace
+### Match Flow & Rules
+ * **Game Point Cap**: Matches are calculated using a strict rally scoring format up to 15 points.
+ * **The 7-0 Shutout Clause**: If any side achieves an early lead score of 7-0, the match instantly ends in a shutout victory.
+ * **Interactive Turn Sequence**: The serving player picks a service delivery, prompting the receiver with counter buttons. Rallies bounce back and forth based on choice alignments, randomness, and overall rating (OVR) attribute weights.
+ * **Match Rewards**: Both contestants receive payouts upon match conclusion (Winners secure higher margins of coins and rank points; losers take smaller participation drops).
+ * 
