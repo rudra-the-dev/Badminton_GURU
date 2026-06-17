@@ -1,8 +1,20 @@
 [project]
 name = "badminton-guru"
 version = "0.1.0"
-description = "A Discord bot for competitive badminton doubles matches"
+description = "A tactical, turn-based PvP Discord bot for competitive badminton doubles matches"
 authors = [{name = "rudra-the-dev"}]
+requires-python = ">=3.10"
+dependencies = [
+    "discord.py==2.3.2",
+    "motor==3.3.1",
+    "python-dotenv==1.0.0",
+    "flask==3.0.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.uv]
+managed = true
 devDependencies = []
