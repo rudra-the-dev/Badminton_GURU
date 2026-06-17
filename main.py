@@ -1,3 +1,17 @@
+# =========================================================================
+# PYTHON 3.13+ / 3.14+ COMPATIBILITY PATCH FOR DISCORD.PY
+# Discord.py tries to import 'audioop', which was removed in modern Python.
+# This injects a dummy module into system memory to bypass the import error.
+import sys
+from types import ModuleType
+
+if 'audioop' not in sys.modules:
+    dummy_audioop = ModuleType('audioop')
+    # Provide the basic attributes discord.py looks for
+    dummy_audioop.error = Exception
+    sys.modules['audioop'] = dummy_audioop
+# =========================================================================
+
 import discord
 from discord.ext import commands
 import motor.motor_asyncio
@@ -68,4 +82,3 @@ async def main():
 # Launch system routine runtime
 if __name__ == "__main__":
     asyncio.run(main())
-    
