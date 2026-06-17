@@ -205,11 +205,12 @@ class MatchCog(commands.Cog):
             return
 
         shot_map = {
-            "smash": ShotType.SMASH,
-            "drop": ShotType.DROP,
-            "clear": ShotType.CLEAR,
-            "net": ShotType.NET_SHOT,
-            "drive": ShotType.DRIVE
+    "smash": ShotType.SMASH,
+    "drop": ShotType.DROP,
+    "clear": ShotType.CLEAR,
+    "net": ShotType.NET_SHOT,
+    "drive": ShotType.DRIVE,
+    "lift": ShotType.LIFT
         }
 
         shot_type = shot_map.get(shot_name.lower())
